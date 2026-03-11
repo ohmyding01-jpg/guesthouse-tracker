@@ -1,4 +1,5 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import {
     initialRooms,
     initialStaff,
@@ -57,6 +58,9 @@ function getInitialState() {
 
 function appReducer(state, action) {
     switch (action.type) {
+        case 'SET_ROOMS':
+            return { ...state, rooms: action.payload };
+
         case 'SET_CURRENT_USER':
             return { ...state, currentUser: action.payload };
 
@@ -133,6 +137,28 @@ export function AppProvider({ children }) {
             console.warn('Failed to save state:', e);
         }
     }, [state]);
+
+    // Fetch rooms from Supabase on mount
+    useEffect(() => {
+        const fetchRooms = async () => {
+            const { data, error } = await supabase.from('rooms').select('*').order('room_number');
+            if (error) {
+                console.error('Error fetching rooms:', error);
+            } else if (data && data.length > 0) {
+                const mappedRooms = data.map(dbRoom => ({
+                    id: dbRoom.id.toString(),
+                    number: dbRoom.room_number,
+                    status: dbRoom.status || 'clean',
+                    type: 'Standard',
+                    floor: 1,
+                    cleaningNotes: dbRoom.cleaning_notes,
+                    lastCleaned: dbRoom.created_at
+                }));
+                dispatch({ type: 'SET_ROOMS', payload: mappedRooms });
+            }
+        };
+        fetchRooms();
+    }, []);
 
     return (
         <AppContext.Provider value={{ state, dispatch }}>

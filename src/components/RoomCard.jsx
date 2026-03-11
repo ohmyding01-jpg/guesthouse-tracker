@@ -1,4 +1,5 @@
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabaseClient';
 import { STATUS_CONFIG, ROOM_STATUSES } from '../data/mockData';
 import './RoomCard.css';
 
@@ -14,14 +15,20 @@ export default function RoomCard({ room, staffMap, editable = false, compact = f
     const config = STATUS_CONFIG[room.status];
     const staff = staffMap?.[room.assignedTo];
 
-    function cycleStatus() {
+    async function cycleStatus() {
         if (!editable) return;
         const currentIdx = STATUS_ORDER.indexOf(room.status);
         const nextIdx = (currentIdx + 1) % STATUS_ORDER.length;
+        const newStatus = STATUS_ORDER[nextIdx];
+
+        // Optimistic UI update
         dispatch({
             type: 'SET_ROOM_STATUS',
-            payload: { roomId: room.id, status: STATUS_ORDER[nextIdx] },
+            payload: { roomId: room.id, status: newStatus },
         });
+
+        // Backend update
+        await supabase.from('rooms').update({ status: newStatus }).eq('id', room.id);
     }
 
     return (

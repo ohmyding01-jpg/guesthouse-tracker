@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabaseClient';
 import { STATUS_CONFIG, ROOM_STATUSES, DAYS } from '../data/mockData';
 import './StaffView.css';
 
@@ -36,8 +37,12 @@ export default function StaffView() {
     const pendingTasks = myTasks.filter((t) => !t.completed);
     const completedTasks = myTasks.filter((t) => t.completed);
 
-    function handleMarkCleaned(roomId) {
+    async function handleMarkCleaned(roomId) {
+        // Optimistic UI update
         dispatch({ type: 'MARK_ROOM_CLEANED', payload: { roomId } });
+
+        // Backend update
+        await supabase.from('rooms').update({ status: 'clean' }).eq('id', roomId);
     }
 
     function handleToggleTask(taskId) {
